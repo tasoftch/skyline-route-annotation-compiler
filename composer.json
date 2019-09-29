@@ -1,0 +1,24 @@
+{
+  "name": "skyline/route-annotation-compiler",
+  "license": "BSD-3-Clause",
+  "minimum-stability": "dev",
+  "authors": [
+    {
+      "name": "Thomas Abplanalp",
+      "email": "info@tasoft.ch"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Skyline\\Compiler\\Annotation\\" : "src"
+    }
+  },
+  "require" : {
+    "php": "^7.2",
+    "skyline/exposed-symbols": "dev-master"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^6",
+    "skyline/compiler": "dev-master"
+  }
+}
