@@ -35,14 +35,91 @@
 namespace Skyline\Compiler\Annotation\Compiler;
 
 
+use Skyline\Compiler\CompilerConfiguration;
 use Skyline\Compiler\CompilerContext;
 use Skyline\Expose\Compiler\AbstractAnnotationCompiler;
+use Skyline\Router\AbstractRouterPlugin;
 
 class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
 {
+    private $routingFile;
+    public function __construct(string $compilerID, string $routingFile = "", bool $excludeMagicMethods = true)
+    {
+        parent::__construct($compilerID, $excludeMagicMethods);
+        $this->routingFile = $routingFile;
+    }
+
     public function compile(CompilerContext $context)
     {
+        $generic = [];
+        foreach($this->yieldClasses("ACTIONCONTROLLER") as $controller) {
 
+            $list = $this->findClassMethods($controller, self::OPT_PUBLIC_OBJECTIVE);
+
+            if($list) {
+                foreach($list as $name => $method) {
+                    $annots = $this->getAnnotationsOfMethod($method, true);
+                    if($annots) {
+                        $actionInfo = [
+                            AbstractRouterPlugin::ROUTED_CONTROLLER_KEY => $controller,
+                            AbstractRouterPlugin::ROUTED_METHOD_KEY => $method->getName()
+                        ];
+
+
+
+                        if($render = $annots["render"] ?? NULL) {
+                            $actionInfo[ AbstractRouterPlugin::ROUTED_RENDER_KEY ] = array_shift($render);
+                        }
+
+                        if($routes = $annots["route"] ?? NULL) {
+                            $route = array_shift($routes);
+                            if(preg_match("/^\s*(literal|regex)\s+(.*?)\s*$/i", $route, $ms)) {
+                                if(strtolower($ms[1]) == 'literal')
+                                    $generic[ AbstractRouterPlugin::URI_ROUTE ][$ms[2]] = $actionInfo;
+                                elseif(strtolower($ms[1]) == 'regex')
+                                    $generic[ AbstractRouterPlugin::REGEX_URI_ROUTE ][$ms[2]] = $actionInfo;
+                                else
+                                    trigger_error("@route $ms[1] is not valid", E_USER_WARNING);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if($generic) {
+            $dir = $context->getSkylineAppDirectory(CompilerConfiguration::SKYLINE_DIR_COMPILED);
+            $routings = require "$dir/$this->routingFile";
+
+            $tokens = token_get_all( file_get_contents("$dir/$this->routingFile") );
+            $comment = "";
+            foreach($tokens as $token) {
+                if(is_array($token) && $token[0] == T_COMMENT) {
+                    $comment = $token[1];
+                    break;
+                }
+            }
+
+            if(preg_match_all("/^\s*\*\s*(\d+)\.\s+(.*?)$/im", $comment, $ms)) {
+                $comment = "/*\n *\t== TASoft Config Compiler ==\n *\tCompiled from:\n";
+                foreach($ms[1] as $idx => $nr)
+                    $comment .= " *\t$nr.\t" . $ms[2][$idx] . "\n";
+
+                $nr++;
+                $comment .= " *\t$nr.\tGeneric Annotation Compiler\n */\n";
+            }
+
+            foreach($routings as $type => $listings) {
+                foreach($listings as $info => $listing) {
+                    $generic[$type][$info] = $listing;
+                }
+            }
+
+            $data = var_export($generic, true);
+
+            $data = "<?php\n$comment\nreturn $data;";
+            file_put_contents("$dir/$this->routingFile", $data);
+        }
     }
 
     public function getCompilerName(): string

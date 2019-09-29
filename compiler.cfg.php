@@ -38,8 +38,13 @@ use Skyline\Compiler\Factory\AbstractExtendedCompilerFactory;
 return [
     'route-annotations' => [
         AbstractExtendedCompilerFactory::COMPILER_CLASS_KEY => ResolvesRoutAnnotationsCompiler::class,
+        AbstractExtendedCompilerFactory::COMPILER_ARGUMENTS_KEY => [
+            'routingFile' => 'routing.config.php',
+            'excludeMagicMethods' => true
+        ],
         AbstractExtendedCompilerFactory::COMPILER_DEPENDENCIES_KEY => [
-            'expose-symbols'
+            'expose-symbols',
+            "routing-config"
         ]
     ]
 ];

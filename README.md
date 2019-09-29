@@ -6,9 +6,9 @@ class MyActionController extends AbstractActionController {
     /**
      * My first action
      * 
-     * @route URI:literal(/direct-uri-to-this-action)
-     * @route HOST:regex(%(www|shop|api)\.example\.org%i)
-     * @route CNT:literal(text/* application/json application/zip)
+     * @route literal /direct-uri-to-this-action 
+     * @route regex %^/my\-(1|2|3)\-action$%i 
+     *
      * @render html-render
      */
     public function myAction() {
@@ -17,7 +17,7 @@ class MyActionController extends AbstractActionController {
 }
 ```
 
-The @route annotation declares how to reach this action. Using URI|HOST|CNT together to filter requests. You must declare at least a URI annotation.
+The @route annotation declares how to reach this action. Using literal or regex to describe a request URI. You must declare at least a URI annotation.
 
 Additional declare a specific render to use.
 
