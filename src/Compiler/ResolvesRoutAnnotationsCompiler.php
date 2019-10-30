@@ -52,6 +52,8 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
     public function compile(CompilerContext $context)
     {
         $generic = [];
+        $modules = [];
+
         foreach($this->yieldClasses("ACTIONCONTROLLER") as $controller) {
 
             $list = $this->findClassMethods($controller, self::OPT_PUBLIC_OBJECTIVE);
@@ -65,8 +67,12 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
                             AbstractRouterPlugin::ROUTED_METHOD_KEY => $method->getName()
                         ];
 
-
-
+                        if($module = $this->getDeclaredModule($controller)) {
+                            $modules[$module] = [];
+                            $ggg = &$modules[$module];
+                        } else {
+                            $ggg = &$generic;
+                        }
                         if($render = $annots["render"] ?? NULL) {
                             $actionInfo[ AbstractRouterPlugin::ROUTED_RENDER_KEY ] = array_shift($render);
                         }
@@ -75,9 +81,9 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
                             $route = array_shift($routes);
                             if(preg_match("/^\s*(literal|regex)\s+(.*?)\s*$/i", $route, $ms)) {
                                 if(strtolower($ms[1]) == 'literal')
-                                    $generic[ AbstractRouterPlugin::URI_ROUTE ][$ms[2]] = $actionInfo;
+                                    $ggg[ AbstractRouterPlugin::URI_ROUTE ][$ms[2]] = $actionInfo;
                                 elseif(strtolower($ms[1]) == 'regex')
-                                    $generic[ AbstractRouterPlugin::REGEX_URI_ROUTE ][$ms[2]] = $actionInfo;
+                                    $ggg[ AbstractRouterPlugin::REGEX_URI_ROUTE ][$ms[2]] = $actionInfo;
                                 else
                                     trigger_error("@route $ms[1] is not valid", E_USER_WARNING);
                             }
@@ -117,7 +123,17 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
 
             $data = var_export($generic, true);
 
-            $data = "<?php\n$comment\nreturn $data;";
+            if($modules) {
+                $modules = var_export($modules, true);
+                $data = "<?php
+use Skyline\\Module\\Loader\\ModuleLoader;
+return ModuleLoader::dynamicallyCompile(function() {
+return $data;
+}, $modules);";
+            } else {
+                $data = "<?php\n$comment\nreturn $data;";
+            }
+
             file_put_contents("$dir/$this->routingFile", $data);
         }
     }
