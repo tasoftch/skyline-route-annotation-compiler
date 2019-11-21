@@ -71,7 +71,7 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
                             $modules[$module] = [];
                             $ggg = &$modules[$module];
 
-                            $actionInfo["module"] = $module;
+                            $actionInfo[ AbstractRouterPlugin::ROUTED_MODULE_KEY ] = $module;
                         } else {
                             $ggg = &$generic;
                         }
