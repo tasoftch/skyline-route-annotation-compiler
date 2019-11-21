@@ -70,6 +70,8 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
                         if($module = $this->getDeclaredModule($controller)) {
                             $modules[$module] = [];
                             $ggg = &$modules[$module];
+
+                            $actionInfo["module"] = $module;
                         } else {
                             $ggg = &$generic;
                         }
