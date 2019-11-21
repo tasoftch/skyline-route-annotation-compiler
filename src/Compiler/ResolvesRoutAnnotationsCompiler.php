@@ -68,7 +68,9 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
                         ];
 
                         if($module = $this->getDeclaredModule($controller)) {
-                            $modules[$module] = [];
+                            if(!isset($modules[$module]))
+                                $modules[$module] = [];
+
                             $ggg = &$modules[$module];
 
                             $actionInfo[ AbstractRouterPlugin::ROUTED_MODULE_KEY ] = $module;
