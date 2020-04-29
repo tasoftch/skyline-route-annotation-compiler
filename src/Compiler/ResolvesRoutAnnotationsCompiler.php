@@ -38,6 +38,7 @@ namespace Skyline\Compiler\Annotation\Compiler;
 use Skyline\Compiler\CompilerConfiguration;
 use Skyline\Compiler\CompilerContext;
 use Skyline\Expose\Compiler\AbstractAnnotationCompiler;
+use Skyline\Compiler\Helper\ModuleStorageHelper;
 use Skyline\Router\AbstractRouterPlugin;
 
 class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
@@ -51,8 +52,7 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
 
     public function compile(CompilerContext $context)
     {
-        $generic = [];
-        $modules = [];
+    	$storage = new ModuleStorageHelper();
 
         foreach($this->yieldClasses("ACTIONCONTROLLER") as $controller) {
 
@@ -68,15 +68,10 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
                         ];
 
                         if($module = $this->getDeclaredModule($controller)) {
-                            if(!isset($modules[$module]))
-                                $modules[$module] = [];
-
-                            $ggg = &$modules[$module];
-
+                            $storage->pushModule($module);
                             $actionInfo[ AbstractRouterPlugin::ROUTED_MODULE_KEY ] = $module;
-                        } else {
-                            $ggg = &$generic;
                         }
+
                         if($render = $annots["render"] ?? NULL) {
                             $actionInfo[ AbstractRouterPlugin::ROUTED_RENDER_KEY ] = array_shift($render);
                         }
@@ -85,19 +80,23 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
                             $route = array_shift($routes);
                             if(preg_match("/^\s*(literal|regex)\s+(.*?)\s*$/i", $route, $ms)) {
                                 if(strtolower($ms[1]) == 'literal')
-                                    $ggg[ AbstractRouterPlugin::URI_ROUTE ][$ms[2]] = $actionInfo;
+                                    $storage[ AbstractRouterPlugin::URI_ROUTE ][$ms[2]] = $actionInfo;
                                 elseif(strtolower($ms[1]) == 'regex')
-                                    $ggg[ AbstractRouterPlugin::REGEX_URI_ROUTE ][$ms[2]] = $actionInfo;
+									$storage[ AbstractRouterPlugin::REGEX_URI_ROUTE ][$ms[2]] = $actionInfo;
                                 else
                                     trigger_error("@route $ms[1] is not valid", E_USER_WARNING);
                             }
                         }
+
+						$storage->popModule();
                     }
                 }
             }
         }
 
-        if($generic) {
+        $storage->resetModule();
+
+        if(count($storage)) {
             $dir = $context->getSkylineAppDirectory(CompilerConfiguration::SKYLINE_DIR_COMPILED);
             $routings = require "$dir/$this->routingFile";
 
@@ -121,22 +120,11 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
 
             foreach($routings as $type => $listings) {
                 foreach($listings as $info => $listing) {
-                    $generic[$type][$info] = $listing;
+                    $storage[$type][$info] = $listing;
                 }
             }
 
-            $data = var_export($generic, true);
-
-            if($modules) {
-                $modules = var_export($modules, true);
-                $data = "<?php
-use Skyline\\Module\\Loader\\ModuleLoader;
-return ModuleLoader::dynamicallyCompile(function() {
-return $data;
-}, $modules);";
-            } else {
-                $data = "<?php\n$comment\nreturn $data;";
-            }
+            $data = $storage->exportStorage($comment);
 
             file_put_contents("$dir/$this->routingFile", $data);
         }
