@@ -70,7 +70,11 @@ class ResolvesRoutAnnotationsCompiler extends AbstractAnnotationCompiler
                         if($module = $this->getDeclaredModule($controller)) {
                             $storage->pushModule($module);
                             $actionInfo[ AbstractRouterPlugin::ROUTED_MODULE_KEY ] = $module;
-                        }
+                        } elseif($module = $annots["module"]) {
+							$module = array_shift($module);
+							$storage->pushModule($module);
+							$actionInfo[ AbstractRouterPlugin::ROUTED_MODULE_KEY ] = $module;
+						}
 
                         if($render = $annots["render"] ?? NULL) {
                             $actionInfo[ AbstractRouterPlugin::ROUTED_RENDER_KEY ] = array_shift($render);
